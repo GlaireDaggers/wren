@@ -289,6 +289,8 @@ void wrenFreeVM(WrenVM* vm);
 // Immediately run the garbage collector to free unused memory.
 void wrenCollectGarbage(WrenVM* vm);
 
+void wrenUnloadModule(WrenVM* vm, const char* module);
+
 // Runs [source], a string of Wren source code in a new fiber in [vm] in the
 // context of resolved [module].
 WrenInterpretResult wrenInterpret(WrenVM* vm, const char* module,
@@ -477,6 +479,9 @@ void wrenInsertInList(WrenVM* vm, int listSlot, int index, int elementSlot);
 // Returns the number of entries in the map stored in [slot].
 int wrenGetMapCount(WrenVM* vm, int slot);
 
+// unpack all of this map's keys into a new list
+void wrenGetMapKeys(WrenVM* vm, int mapSlot, int destSlot);
+
 // Returns true if the key in [keySlot] is found in the map placed in [mapSlot].
 bool wrenGetMapContainsKey(WrenVM* vm, int mapSlot, int keySlot);
 
@@ -502,6 +507,8 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
 // Sets the current fiber to be aborted, and uses the value in [slot] as the
 // runtime error object.
 void wrenAbortFiber(WrenVM* vm, int slot);
+
+void wrenGetFiberError(WrenVM* vm, int slot);
 
 // Returns the user data associated with the WrenVM.
 void* wrenGetUserData(WrenVM* vm);

@@ -223,6 +223,14 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
   return vm->config.reallocateFn(memory, newSize);
 }
 
+void wrenUnloadModule(WrenVM* vm, const char* module)
+{
+    wrenEnsureSlots(vm, 1);
+    wrenSetSlotString(vm, 0, module);
+
+    wrenMapRemoveKey(vm, vm->modules, vm->apiStack[0]);
+}
+
 // Captures the local variable [local] into an [Upvalue]. If that local is
 // already in an upvalue, the existing one will be used. (This is important to
 // ensure that multiple closures closing over the same variable actually see
@@ -1768,6 +1776,28 @@ int wrenGetMapCount(WrenVM* vm, int slot)
   return map->count;
 }
 
+void wrenGetMapKeys(WrenVM* vm, int mapSlot, int destSlot)
+{
+    validateApiSlot(vm, mapSlot);
+    validateApiSlot(vm, destSlot);
+    ASSERT(IS_MAP(vm->apiStack[mapSlot]), "Slot must hold a map.");
+
+    ObjMap* map = AS_MAP(vm->apiStack[mapSlot]);
+    ObjList* list = wrenNewList(vm, map->count);
+
+    int nextEntry = 0;
+    for (int i = 0; i < map->count; i++)
+    {
+        while (map->entries[nextEntry].key == UNDEFINED_VAL) nextEntry++;
+
+        wrenListInsert(vm, list, map->entries[nextEntry].key, i);
+
+        nextEntry++;
+    }
+
+    setSlot(vm, destSlot, OBJ_VAL(list));
+}
+
 bool wrenGetMapContainsKey(WrenVM* vm, int mapSlot, int keySlot)
 {
   validateApiSlot(vm, mapSlot);
@@ -1859,6 +1889,12 @@ void wrenAbortFiber(WrenVM* vm, int slot)
 {
   validateApiSlot(vm, slot);
   vm->fiber->error = vm->apiStack[slot];
+}
+
+void wrenGetFiberError(WrenVM* vm, int slot)
+{
+    validateApiSlot(vm, slot);
+    vm->apiStack[slot] = vm->fiber->error;
 }
 
 void* wrenGetUserData(WrenVM* vm)

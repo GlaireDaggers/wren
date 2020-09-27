@@ -151,6 +151,39 @@ DEF_PRIMITIVE(fiber_error)
   RETURN_VAL(AS_FIBER(args[0])->error);
 }
 
+DEF_PRIMITIVE(fiber_stacktrace)
+{
+    ObjFiber* runFiber = AS_FIBER(args[0]);
+    ObjList* frameList = wrenNewList(vm, 0);
+
+    int insertIdx = 0;
+
+    for (int i = 0; i < runFiber->numFrames; i++)
+    {
+        CallFrame* frame = &runFiber->frames[i];
+        ObjFn* fn = frame->closure->fn;
+
+        // Skip over stub functions for calling methods from the C API.
+        if (fn->module == NULL) continue;
+
+        // The built-in core module has no name. We explicitly omit it from stack
+        // traces since we don't want to highlight to a user the implementation
+        // detail of what part of the core module is written in C and what is Wren.
+        if (fn->module->name == NULL) continue;
+
+        int line = fn->debug->sourceLines.data[frame->ip - fn->code.data - 1];
+        Value lineStr = wrenNumToString(vm, (double)line);
+        Value modStr = wrenNewString(vm, fn->module->name->value);
+        Value msgStr = wrenNewString(vm, fn->debug->name);
+
+        wrenListInsert(vm, frameList, lineStr, insertIdx++);
+        wrenListInsert(vm, frameList, modStr, insertIdx++);
+        wrenListInsert(vm, frameList, msgStr, insertIdx++);
+    }
+
+    RETURN_OBJ(frameList);
+}
+
 DEF_PRIMITIVE(fiber_isDone)
 {
   ObjFiber* runFiber = AS_FIBER(args[0]);
@@ -1144,6 +1177,13 @@ DEF_PRIMITIVE(system_writeString)
   RETURN_VAL(args[1]);
 }
 
+DEF_PRIMITIVE(system_executingModuleName)
+{
+    ObjModule* module = vm->fiber->frames[vm->fiber->numFrames - 1].closure->fn->module;
+    Value moduleName = wrenNewString(vm, module->name->value);
+    RETURN_VAL(moduleName);
+}
+
 // Creates either the Object or Class class in the core module with [name].
 static ObjClass* defineClass(WrenVM* vm, ObjModule* module, const char* name)
 {
@@ -1237,6 +1277,7 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->fiberClass, "call()", fiber_call);
   PRIMITIVE(vm->fiberClass, "call(_)", fiber_call1);
   PRIMITIVE(vm->fiberClass, "error", fiber_error);
+  PRIMITIVE(vm->fiberClass, "stacktrace", fiber_stacktrace);
   PRIMITIVE(vm->fiberClass, "isDone", fiber_isDone);
   PRIMITIVE(vm->fiberClass, "transfer()", fiber_transfer);
   PRIMITIVE(vm->fiberClass, "transfer(_)", fiber_transfer1);
@@ -1379,6 +1420,7 @@ void wrenInitializeCore(WrenVM* vm)
 
   ObjClass* systemClass = AS_CLASS(wrenFindVariable(vm, coreModule, "System"));
   PRIMITIVE(systemClass->obj.classObj, "clock", system_clock);
+  PRIMITIVE(systemClass->obj.classObj, "executingModuleName", system_executingModuleName);
   PRIMITIVE(systemClass->obj.classObj, "gc()", system_gc);
   PRIMITIVE(systemClass->obj.classObj, "writeString_(_)", system_writeString);
 
