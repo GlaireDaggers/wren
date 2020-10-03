@@ -1814,7 +1814,7 @@ void wrenGetMapKeys(WrenVM* vm, int mapSlot, int destSlot)
     int nextEntry = 0;
     for (int i = 0; i < map->count; i++)
     {
-        while (map->entries[nextEntry].key == UNDEFINED_VAL) nextEntry++;
+        while (wrenValuesEqual(map->entries[nextEntry].key, UNDEFINED_VAL)) nextEntry++;
 
         wrenListInsert(vm, list, map->entries[nextEntry].key, i);
 
