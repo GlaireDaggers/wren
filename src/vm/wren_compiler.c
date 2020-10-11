@@ -2838,8 +2838,8 @@ static void endLoop(Compiler* compiler)
 
   patchJump(compiler, compiler->loop->exitJump);
 
-  // Find any break or continue placeholder instructions (which will be CODE_BREAK/CONTINUE in the
-  // bytecode) and replace them with real jumps/loops
+  // Find any break placeholder instructions (which will be CODE_END in the
+  // bytecode) and replace them with real jumps.
   int i = compiler->loop->body;
   while (i < compiler->fn->code.count)
   {
@@ -3027,7 +3027,8 @@ void statement(Compiler* compiler)
     // Emit a placeholder instruction for the jump to the end of the body. When
     // we're done compiling the loop body and know where the end is, we'll
     // replace these with `CODE_JUMP` instructions with appropriate offsets.
-    // `CODE_END` here is just a placeholder - the real opcode will be patched in later
+    // We use `CODE_END` here because that can't occur in the middle of
+    // bytecode.
     emitJump(compiler, CODE_END);
   }
   else if (match(compiler, TOKEN_CONTINUE))
