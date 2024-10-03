@@ -1991,3 +1991,8 @@ void wrenSetUserData(WrenVM* vm, void* userData)
 {
 	vm->config.userData = userData;
 }
+
+bool wrenCompareHandles(WrenHandle* a, WrenHandle* b)
+{
+  return wrenValuesEqual(a->value, b->value);
+}
